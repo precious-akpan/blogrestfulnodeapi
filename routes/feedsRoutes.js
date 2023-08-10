@@ -6,10 +6,11 @@ const {
   updatePost, deletePost,
 } = require("../controllers/feedsController");
 const { body } = require("express-validator");
+const isAuth = require('../middleware/is-auth')
 
 const router = express.Router();
 // GET /feeds/posts
-router.get("/posts", getPosts);
+router.get("/posts", isAuth, getPosts);
 
 // POST /feeds/post
 router.post(

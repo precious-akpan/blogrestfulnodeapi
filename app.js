@@ -1,7 +1,8 @@
 const express = require("express");
-
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 const app = express();
-
+const httpServer = createServer(app);
 const multer = require("multer");
 
 const feedsRoutes = require("./routes/feedsRoutes");
@@ -31,9 +32,7 @@ const fileFilter = (req, file, callback) => {
 };
 
 app.use(bodyParser.json());
-app.use(
-  multer({ storage: fileStorage, fileFilter }).single("image"),
-);
+app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -48,11 +47,29 @@ app.use("/auth", authRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);
-  res.status(error.statusCode || 500).json({ message: error.message, data: error.data});
+  res
+    .status(error.statusCode || 500)
+    .json({ message: error.message, data: error.data });
 });
 mongoose
   .connect("mongodb://localhost:27017/blog")
-  .then(() =>
-    app.listen(8080, () => console.log("Server running on port 8080")),
-  )
+  .then(() => {
+    const server = app.listen(8080, () =>
+      console.log("Server running on port 8080"),
+    );
+    // const io = new Server(httpServer, {
+    //   cors: {
+    //     origin: "http://localhost:3000",
+    //     credentials: true,
+    //   },
+    // });
+    const io = require("socket.io")(server, {
+      cors: { origin: "http://localhost:3000", credentials: true },
+    });
+    io.on("connection", (socket) => {
+      console.log("Client connected");
+    });
+
+    // httpServer.listen(8080, () => console.log("Server running on port 8080"));
+  })
   .catch((error) => console.log(error));

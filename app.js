@@ -46,7 +46,7 @@ app.use("/feeds", feedsRoutes);
 app.use("/auth", authRoutes);
 
 app.use((error, req, res, next) => {
-  console.log(error);
+  console.log('error handler middleware',error);
   res
     .status(error.statusCode || 500)
     .json({ message: error.message, data: error.data });
@@ -54,22 +54,21 @@ app.use((error, req, res, next) => {
 mongoose
   .connect("mongodb://localhost:27017/blog")
   .then(() => {
-    const server = app.listen(8080, () =>
-      console.log("Server running on port 8080"),
-    );
+    // const server = app.listen(8080, () =>
+    //   console.log("Server running on port 8080"),
+    // );
     // const io = new Server(httpServer, {
     //   cors: {
     //     origin: "http://localhost:3000",
     //     credentials: true,
     //   },
     // });
-    const io = require("socket.io")(server, {
-      cors: { origin: "http://localhost:3000", credentials: true },
-    });
+
+    const io = require("./socket").init(httpServer);
     io.on("connection", (socket) => {
       console.log("Client connected");
     });
 
-    // httpServer.listen(8080, () => console.log("Server running on port 8080"));
+    httpServer.listen(8080, () => console.log("Server running on port 8080"));
   })
   .catch((error) => console.log(error));

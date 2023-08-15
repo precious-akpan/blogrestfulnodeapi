@@ -164,7 +164,7 @@ exports.deletePost = async (req, res, next) => {
     await Post.findByIdAndRemove(postId);
     const user = await User.findById(req.userId);
     user.posts.pull(postId);
-    const result = await user.save();
+    await user.save();
     io.getIO().emit("posts", {
       action: "delete",
       post: postId,

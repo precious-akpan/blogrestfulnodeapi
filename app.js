@@ -1,17 +1,14 @@
 const express = require("express");
 const { createServer } = require("http");
-const { Server } = require("socket.io");
 const app = express();
 const httpServer = createServer(app);
 const multer = require("multer");
-
-const feedsRoutes = require("./routes/feedsRoutes");
-const authRoutes = require("./routes/authRoutes");
-
+const { graphqlHTTP } = require("express-graphql");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const path = require("path");
-
+const graphqlSchema = require("./graphql/schema");
+const graphqlResolver = require("./graphql/resolvers");
 const fileStorage = multer.diskStorage({
   destination: (req, file, callback) => {
     callback(null, "images");
@@ -38,15 +35,34 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200)
+  }
   next();
 });
 
 app.use("/images", express.static(path.join(__dirname, "images")));
-app.use("/feeds", feedsRoutes);
-app.use("/auth", authRoutes);
 
+app.use(
+  "/graphql",
+  graphqlHTTP({
+    schema: graphqlSchema,
+    rootValue: graphqlResolver,
+    graphiql: true,
+    customFormatErrorFn(err) {
+      if (!err.originalError) {
+        return err;
+      }
+      const data = err.originalError.data;
+      const message = err.message || "An error occurred.";
+      const code = err.originalError.code || 500;
+
+      return { message, status: code, data };
+    },
+  }),
+);
 app.use((error, req, res, next) => {
-  console.log('error handler middleware',error);
+  console.log("error handler middleware", error);
   res
     .status(error.statusCode || 500)
     .json({ message: error.message, data: error.data });
@@ -54,21 +70,6 @@ app.use((error, req, res, next) => {
 mongoose
   .connect("mongodb://localhost:27017/blog")
   .then(() => {
-    // const server = app.listen(8080, () =>
-    //   console.log("Server running on port 8080"),
-    // );
-    // const io = new Server(httpServer, {
-    //   cors: {
-    //     origin: "http://localhost:3000",
-    //     credentials: true,
-    //   },
-    // });
-
-    const io = require("./socket").init(httpServer);
-    io.on("connection", (socket) => {
-      console.log("Client connected");
-    });
-
-    httpServer.listen(8080, () => console.log("Server running on port 8080"));
+    app.listen(8080, () => console.log("Server running on port 8080"));
   })
   .catch((error) => console.log(error));

@@ -8,8 +8,7 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const graphqlSchema = require("./graphql/schema");
 const graphqlResolver = require("./graphql/resolvers");
-const {join} = require('path')
-const fs = require("fs");
+const clearImage = require("./utils/imageCleaner");
 const fileStorage = multer.diskStorage({
   destination: (req, file, callback) => {
     callback(null, "images");
@@ -91,6 +90,3 @@ mongoose
   })
   .catch((error) => console.log(error));
 
-const clearImage = (filePath) => {
-  fs.unlink(join(__dirname, filePath), err => console.log(err))
-}

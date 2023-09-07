@@ -3,6 +3,7 @@ const { isEmail, isLength, isEmpty } = require("validator");
 const Post = require("../models/posts");
 const { hash, compare } = require("bcryptjs");
 const { sign } = require("jsonwebtoken");
+const clearImage = require("../utils/imageCleaner");
 module.exports = {
   createUser: async function ({ userInput }, req) {
     const { email, name, password } = userInput;
@@ -217,4 +218,71 @@ module.exports = {
       updatedAt: editedPost.updatedAt.toISOString(),
     };
   },
+
+  async deletePost({ id }, req) {
+    if (!req.isAuth) {
+      const error = new Error("Unauthorized user action");
+      error.code = 401;
+      throw error;
+    }
+
+    const post = await Post.findById(id);
+    if (!post) {
+      const error = new Error("Post not found");
+      error.code = 404;
+      throw error;
+    }
+
+    if (req.userId.toString() !== post.creator.toString()) {
+      const error = new Error("Unauthorized action");
+      error.code = 403;
+      throw error;
+    }
+
+    clearImage(post.imageUrl);
+    await Post.findByIdAndRemove(id);
+    const user = await User.findById(req.userId);
+    await user.posts.pull(id);
+    await user.save();
+
+    return true;
+  },
+  async user(args, req) {
+    if (!req.isAuth) {
+      const error = new Error("User not authenticated");
+      error.code = 403;
+      throw error;
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error("User not found.");
+      error.code = 404;
+      throw error;
+    }
+    return {
+      ...user._doc,
+      id: user._id.toString(),
+    };
+  },
+
+  async updateStatus({status}, req) {
+    if (!req.isAuth) {
+      const error = new Error('User not authenticated.')
+      error.code = 404
+      throw error
+    }
+
+    const user = await User.findById(req.userId)
+    if (!user) {
+      const error = new Error('User not found.')
+      error.code = 404
+      throw error
+    }
+
+    user.status = status
+    await user.save()
+    return {...user._doc, id: user._id.toString()}
+
+  }
 };

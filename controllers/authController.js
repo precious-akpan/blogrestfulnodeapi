@@ -36,7 +36,7 @@ exports.login = async (req, res, next) => {
     const user = await User.findOne({ email });
     if (!user) {
       const error = new Error("User does not exist.");
-      error.statusCode = 404;
+      error.statusCode = 401;
       throw error;
     }
     const isEqual = await bcrypt.compare(password, user.password);
@@ -50,7 +50,7 @@ exports.login = async (req, res, next) => {
         email: user.email,
         userId: user._id.toString(),
       },
-      "sophisticatedsecretkey",
+      "supersecretsecretkey",
       { expiresIn: "1h" },
     );
     res.status(200).json({
@@ -58,7 +58,32 @@ exports.login = async (req, res, next) => {
       token,
       userId: user._id.toString(),
     });
+    return;
   } catch (e) {
-    next(e)
+    if (!e.statusCode) {
+      e.statusCode = 500;
+    }
+    next(e);
+    return e;
+  }
+};
+
+exports.getUserStatus = async (req, res, next) => {
+  // console.log(req, res);
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({ status: user.status });
+    return;
+  } catch (e) {
+    if (!e.statusCode) {
+      e.statusCode = 500;
+    }
+    next(e);
+    return e;
   }
 };
